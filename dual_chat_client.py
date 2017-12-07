@@ -1,8 +1,19 @@
 #!/usr/bin/python3.6
 #-*-coding=Utf8-*-
 
-import threading, socket, sys
+import threading, socket, sys, time
 from tkinter import *
+
+class ThreadActualiserListeJoueursConnectes(threading.Thread):
+    def __init__(self, emission, fenetre):
+        threading.Thread.__init__(self)
+        self.emission = emission
+        self.fenetre = fenetre
+    def run(self):
+        while True:
+            print(self.fenetre.pseudo)
+            self.emission.emmetre(self.fenetre.pseudo + ", getJoueursConnectes")
+            time.sleep(3)
 
 class Fenetre(Frame):
     def __init__(self, emission):
@@ -13,12 +24,16 @@ class Fenetre(Frame):
         self.labelPseudo = Label(self, text="rentrer votre pseudo : ")
         self.labelPseudo.pack(side=TOP)
         self.saisiePseudo = Entry(self, width=25)
-        self.saisiePseudo.bind('<Return>', self.validerPSeudo)
+        self.saisiePseudo.bind('<Return>', self.validerPseudo)
         self.saisiePseudo.pack(side=BOTTOM)
         self.conversation = Text(self)
-        self.conversation.pack()
+        self.conversation.pack(side=RIGHT)
+        self.connectes = Text(self)
+        self.connectes.pack(side=LEFT)
         self.pack()
-    def validerPSeudo(self, event):
+        self.pseudo = ""
+        
+    def validerPseudo(self, event):
         self.pseudo = self.saisiePseudo.get()
         self.labelPseudo.destroy()
         Label(self, text="vous : " + self.pseudo).pack(side=TOP)
@@ -26,16 +41,20 @@ class Fenetre(Frame):
         self.saisieMess = Entry(self, width=50)
         self.saisieMess.bind('<Return>', self.envoyerMess)
         self.saisieMess.pack(side=BOTTOM)
+       # taljc = ThreadActualiserListeJoueursConnectes(self.emission, self)
+       # taljc.start()
     def fermerThreads(self, event):
-        self.emission.emmetre("jemedeco!")
+        self.emission.emmetre(self.pseudo + ", jemedeco!")
         print("fermeture threads")
         tf.stop()
         tr.stop()
+        taljc.stop()
     def envoyerMess(self, event):
         message = str(self.pseudo) + ", " + str(self.saisieMess.get())
         self.emission.emmetre(message)
         self.conversation.insert(INSERT, "\nvous>>" + str(self.saisieMess.get()))
         self.saisieMess.delete(0, END)
+        
         
 class ThreadFenetre(threading.Thread):
     def __init__(self, emission):
@@ -47,7 +66,7 @@ class ThreadFenetre(threading.Thread):
         tr = ThreadReception(connexion, self.fenetre)
         tr.start()
         self.fenetre.mainloop()
-        
+
 class ThreadReception(threading.Thread):
     def __init__(self, connexion, fenetre):
         threading.Thread.__init__(self)
@@ -56,14 +75,17 @@ class ThreadReception(threading.Thread):
     def run(self):
         while True:
             reception = self.connexion.recv(1024).decode("Utf8")
-            if reception == "serveur, vousetesdeconnecté!":
-                break
-            message_recu = reception.split(", ")
-            #if message_recu[1] == "vousetesdeconnecté!" and message_recu[0] == "serveur":
-            #    break
+            print(reception)
+            reception = reception.split(', ')
+            if reception[0] == "serveur":
+                if reception[1] == "vousetesdeconnecté!":
+                    break
+                elif reception[1] == "test get joueurs co!":
+                    print("test get joueurs co!")
+                    
             print("attente d'un message")
             
-            self.fenetre.conversation.insert(INSERT, "\n" + message_recu[0] + ">>" + message_recu[1])
+            self.fenetre.conversation.insert(INSERT, "\n" + reception[0] + ">>" + reception[1])
 # arreter des threads
         print("client arrete. Connexion interrompue")
         self.connexion.close()

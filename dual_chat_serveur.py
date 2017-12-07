@@ -15,14 +15,18 @@ class ThreadClient(threading.Thread):
         nom = self.getName()
         while True:
             messClient = self.connexion.recv(1024).decode("Utf8")
-            if messClient == "jemedeco!":
+            messClient = messClient.split(', ')
+            if messClient[1] == "jemedeco!":
                 mess = "serveur, vousetesdeconnecté!"
                 self.connexion.send(mess.encode("Utf8"))
                 break
+            elif messClient[1] == "getJoueursConnectes":
+                mess = "serveur, test get joueurs co!"
+                self.connexion.send(mess.encode("Utf8"))
             print(messClient)
             for client in conn_client:
                 if client != nom:
-                    print("reexpedition message :  " + messClient)
+                    print("reexpedition message :  " + messClient[0] + ", " + messClient[1])
                     conn_client[client].send(messClient.encode("Utf8"))
         self.connexion.close()
         del conn_client[nom]
